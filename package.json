@@ -1,0 +1,15 @@
+{
+  "name": "noolz",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "server": "npm run dev --prefix backend",
+    "client": "npm run dev --prefix client",
+    "seed": "npm run seed --prefix backend",
+    "seed:admin": "npm run seed:admin --prefix backend",
+    "test:auth": "npm run test:auth --prefix backend",
+    "test:whatsapp": "npm run test:whatsapp --prefix backend",
+    "test:banners": "npm run test:banners --prefix backend",
+    "build": "npm run build --prefix client"
+  }
+}

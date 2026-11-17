@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgMen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B1517"/>
+      <stop offset="45%" stop-color="#2D1F24"/>
+      <stop offset="80%" stop-color="#4A1529"/>
+      <stop offset="100%" stop-color="#8A0B45"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="75%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#D39E57" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#8A0B45" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="gridPattern" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#D39E57" stroke-width="0.75" stroke-opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bgMen)"/>
+  <rect width="1920" height="1080" fill="url(#sunGlow)"/>
+  <rect width="1920" height="1080" fill="url(#gridPattern)"/>
+
+  <!-- Architectural arches & editorial lines -->
+  <g opacity="0.25">
+    <path d="M1250 180 C1250 80, 1550 80, 1550 180 V1080 H1250 Z" fill="none" stroke="#D39E57" stroke-width="2"/>
+    <circle cx="1400" cy="380" r="280" fill="none" stroke="#FAF6EE" stroke-width="1.5" stroke-dasharray="8 8"/>
+    <circle cx="1400" cy="380" r="180" fill="#D39E57" fill-opacity="0.12"/>
+  </g>
+
+  <!-- Stylized Men's T-shirt Silhouette Illustration -->
+  <g transform="translate(1120, 260) scale(1.15)">
+    <!-- Shadow -->
+    <ellipse cx="250" cy="560" rx="180" ry="24" fill="#000000" opacity="0.35"/>
+    <!-- Tee body -->
+    <path d="M140 80 L70 120 L10 240 L70 270 L110 210 L110 520 Q110 540 130 540 L370 540 Q390 540 390 520 L390 210 L430 270 L490 240 L430 120 L360 80 Q340 130 250 130 Q160 130 140 80 Z" fill="#1B1517" stroke="#D39E57" stroke-width="3"/>
+    <!-- Collar & folds -->
+    <path d="M140 80 Q160 130 250 130 Q340 130 360 80" fill="none" stroke="#D39E57" stroke-width="6" stroke-linecap="round"/>
+    <path d="M110 210 L140 230 M390 210 L360 230" stroke="#D39E57" stroke-width="2" opacity="0.5"/>
+    <!-- Printed Graphic on Chest -->
+    <g transform="translate(250, 290) scale(1.2)">
+      <path d="M-60 10 A60 60 0 0 1 60 10 Z" fill="#D39E57"/>
+      <circle cx="0" cy="-10" r="24" fill="#8A0B45"/>
+      <text x="0" y="44" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="700" letter-spacing="4" fill="#FAF6EE">GOLDEN HOUR</text>
+      <text x="0" y="60" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="500" letter-spacing="3" fill="#D39E57">NOOLZ ORIGINAL</text>
+    </g>
+  </g>
+
+  <!-- Editorial typography watermark -->
+  <text x="1840" y="960" text-anchor="end" font-family="Georgia,serif" font-size="120" font-weight="700" fill="#FAF6EE" opacity="0.04" letter-spacing="12">MEN'S WEAR</text>
+</svg>

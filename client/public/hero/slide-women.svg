@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgWomen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#24141A"/>
+      <stop offset="40%" stop-color="#421427"/>
+      <stop offset="85%" stop-color="#6E123B"/>
+      <stop offset="100%" stop-color="#8A0B45"/>
+    </linearGradient>
+    <radialGradient id="roseGlow" cx="80%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#EBC6C3" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#8A0B45" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bgWomen)"/>
+  <rect width="1920" height="1080" fill="url(#roseGlow)"/>
+
+  <!-- Organic botanical curves -->
+  <g opacity="0.2">
+    <path d="M1100 0 C1250 400, 1650 300, 1920 700 V0 Z" fill="#D39E57" fill-opacity="0.1"/>
+    <circle cx="1450" cy="400" r="320" fill="none" stroke="#EBC6C3" stroke-width="1.5"/>
+    <circle cx="1450" cy="400" r="220" fill="none" stroke="#D39E57" stroke-width="2" stroke-dasharray="10 6"/>
+  </g>
+
+  <!-- Stylized Women's Oversized / Cropped Tee Silhouette -->
+  <g transform="translate(1180, 270) scale(1.1)">
+    <ellipse cx="230" cy="520" rx="160" ry="20" fill="#000000" opacity="0.3"/>
+    <!-- Tee body (Oversized Boxy Silhouette) -->
+    <path d="M120 80 L50 110 L0 230 L55 260 L95 210 L100 480 Q100 495 115 495 L345 495 Q360 495 360 480 L365 210 L405 260 L460 230 L410 110 L340 80 Q310 145 230 145 Q150 145 120 80 Z" fill="#F3ECDD" stroke="#D39E57" stroke-width="2.5"/>
+    <!-- Collar & details -->
+    <path d="M120 80 Q150 145 230 145 Q310 145 340 80" fill="none" stroke="#8A0B45" stroke-width="5" stroke-linecap="round"/>
+    <!-- Printed Floral / Botanical Graphic -->
+    <g transform="translate(230, 290) scale(1.15)">
+      <circle cx="0" cy="0" r="18" fill="#8A0B45"/>
+      <ellipse cx="0" cy="-38" rx="14" ry="28" fill="#D39E57" opacity="0.9"/>
+      <ellipse cx="0" cy="38" rx="14" ry="28" fill="#D39E57" opacity="0.9"/>
+      <ellipse cx="-38" cy="0" rx="28" ry="14" fill="#8A0B45" opacity="0.8"/>
+      <ellipse cx="38" cy="0" rx="28" ry="14" fill="#8A0B45" opacity="0.8"/>
+      <text x="0" y="90" text-anchor="middle" font-family="Georgia,serif" font-size="16" font-style="italic" fill="#8A0B45">in bloom</text>
+      <text x="0" y="110" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="600" letter-spacing="4" fill="#1B1517">STITCHED FOR YOU</text>
+    </g>
+  </g>
+
+  <!-- Editorial typography watermark -->
+  <text x="1840" y="960" text-anchor="end" font-family="Georgia,serif" font-size="120" font-weight="700" fill="#FAF6EE" opacity="0.04" letter-spacing="12">WOMEN'S</text>
+</svg>
