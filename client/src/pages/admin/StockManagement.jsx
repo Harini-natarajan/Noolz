@@ -123,7 +123,11 @@ export default function StockManagement() {
                   <tr key={`${r.productId}-${r.color}-${r.size}`} className={`transition hover:bg-cream/70 ${r.status === 'out' ? 'bg-red-50/40' : r.status === 'low' ? 'bg-gold/10' : ''}`}>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <img src={r.product.images[0]} alt="" className="h-11 w-9 rounded-md object-cover" />
+                        <img
+                          src={r.image || r.product.images?.[0] || ''}
+                          alt=""
+                          className="h-11 w-9 rounded-md object-cover"
+                        />
                         <div>
                           <p className="font-medium">{r.product.name}</p>
                           <p className="text-xs text-ink-soft">{categoryName(r.product.category)}</p>

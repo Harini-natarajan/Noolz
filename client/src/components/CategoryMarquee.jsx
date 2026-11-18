@@ -6,10 +6,13 @@ import { useStore } from '../context/StoreContext';
 export default function CategoryMarquee() {
   const { products } = useStore();
 
-  const items = CATEGORIES.map((c) => ({
-    ...c,
-    image: products.find((p) => p.category === c.slug)?.images[0],
-  }));
+  const items = CATEGORIES.map((c) => {
+    const prod = products.find((p) => p.category === c.slug);
+    return {
+      ...c,
+      image: prod?.images?.[0] || prod?.colors?.[0]?.images?.[0] || null,
+    };
+  });
 
   return (
     <section aria-label="Shop by category" className="border-y border-ink/5 bg-cream-dark/60 py-10">

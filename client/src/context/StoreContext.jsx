@@ -19,8 +19,11 @@ export function StoreProvider({ children }) {
     if (!loaded.email || loaded.email === 'hello@noolz.example') {
       loaded.email = SITE_DEFAULTS.email;
     }
-    if (!loaded.instagram || loaded.instagram.includes('noolz.official')) {
+    if (!loaded.instagram || loaded.instagram.includes('noolz.official') || loaded.instagram.includes('noolz_in')) {
       loaded.instagram = SITE_DEFAULTS.instagram;
+    }
+    if (!loaded.instagramHandle || loaded.instagramHandle === 'noolz_in' || loaded.instagramHandle === 'noolz.official') {
+      loaded.instagramHandle = SITE_DEFAULTS.instagramHandle;
     }
     if (!loaded.address || loaded.address.includes('Weavers Lane')) {
       loaded.address = SITE_DEFAULTS.address;

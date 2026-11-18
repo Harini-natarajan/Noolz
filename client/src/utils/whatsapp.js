@@ -37,7 +37,10 @@ export function buildOrderMessage({ product, color, size, quantity = 1, productU
       ? `${window.location.origin}/product/${product.id || product._id}`
       : '';
 
-  const url = productUrl || defaultUrl;
+  let url = productUrl || defaultUrl;
+  if (color && !url.includes('color=')) {
+    url += `${url.includes('?') ? '&' : '?'}color=${encodeURIComponent(color)}`;
+  }
 
   return [
     'Hello NOOLZ,',
@@ -48,7 +51,7 @@ export function buildOrderMessage({ product, color, size, quantity = 1, productU
     `• Colorway: ${color}`,
     `• Size: ${size}`,
     `• Quantity: ${quantity}`,
-    `• Total Price: ₹ ${formattedTotal}`,
+    `• Total Price: ₹${formattedTotal}`,
     `• Product Link: ${url}`,
     '',
     'Please confirm availability and payment/delivery details.',

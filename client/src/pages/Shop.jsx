@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronRight, Search, SearchX, Sparkles, X, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, ChevronRight, Search, SearchX, Sparkles, X, SlidersHorizontal, Ruler } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import SizeChartModal from '../components/SizeChartModal';
 import { EmptyState, ProductSkeleton } from '../components/ui';
 import { CATEGORIES, getCategoryByPath, subcategoryName } from '../config/site';
 import { useStore } from '../context/StoreContext';
@@ -11,6 +12,8 @@ export default function Shop() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { products, loading } = useStore();
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const [sizeChartType, setSizeChartType] = useState('oversized');
 
   // If URL has /shop/:categoryPath, map it. Otherwise check search params `?category=...`
   const matchedCategory = categoryPath ? getCategoryByPath(categoryPath) : null;
@@ -216,6 +219,37 @@ export default function Shop() {
               ))}
             </div>
           )}
+
+          {/* Size Chart Guide Banner */}
+          {(subCategoryPath === 'oversized' || subCategoryPath === 'normal-fit' || subCategoryPath === 'plain-tees') && (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-burgundy/20 bg-white/80 p-4 text-xs sm:text-sm shadow-xs">
+              <div className="flex items-center gap-3 text-ink">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-burgundy/10 text-burgundy">
+                  <Ruler size={18} />
+                </span>
+                <div>
+                  <p className="font-semibold text-ink">
+                    {subCategoryPath === 'oversized'
+                      ? 'Need help picking your oversized size?'
+                      : 'Need help choosing the right size?'}
+                  </p>
+                  <p className="text-xs text-ink-soft">
+                    Check chest, shoulder, length and sleeve measurements before ordering.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSizeChartType(subCategoryPath === 'oversized' ? 'oversized' : 'regular');
+                  setSizeChartOpen(true);
+                }}
+                className="btn-primary btn-sm"
+              >
+                <Ruler size={14} /> View Size & Fit Chart
+              </button>
+            </div>
+          )}
         </header>
       )}
 
@@ -342,6 +376,12 @@ export default function Shop() {
           />
         )}
       </div>
+
+      <SizeChartModal
+        isOpen={sizeChartOpen}
+        onClose={() => setSizeChartOpen(false)}
+        initialType={sizeChartType}
+      />
     </div>
   );
 }

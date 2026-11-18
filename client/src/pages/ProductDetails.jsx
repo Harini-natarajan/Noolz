@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ChevronLeft, Minus, Plus, ShieldCheck, Truck, Palette } from 'lucide-react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, Minus, Plus, ShieldCheck, Truck, Palette, Ruler, Shirt } from 'lucide-react';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import StockBadge from '../components/StockBadge';
 import ProductCard from '../components/ProductCard';
+import SizeChartModal from '../components/SizeChartModal';
 import { EmptyState } from '../components/ui';
-import { categoryName, categoryPath } from '../config/site';
+import { categoryName, categoryPath, COLOR_PRESETS } from '../config/site';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../context/ToastContext';
 import { formatPrice, getStatus, getVariantQty, STATUS_LABEL } from '../utils/stock';
@@ -13,27 +14,143 @@ import { buildOrderMessage, openWhatsApp, getAdminWhatsAppNumber } from '../util
 
 export default function ProductDetails() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlColor = searchParams.get('color');
+
   const { products, loading, settings } = useStore();
   const toast = useToast();
-  const product = products.find((p) => p.id === id);
+  const product = products.find((p) => p.id === id || p._id === id);
 
   const [img, setImg] = useState(0);
   const [color, setColor] = useState(null);
   const [size, setSize] = useState(null);
   const [qty, setQty] = useState(1);
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
 
-  // Reset selection whenever the product changes.
+  const productFit = useMemo(() => {
+    if (!product) return { type: 'oversized', label: 'Oversized', desc: 'Relaxed, drop-shoulder streetwear fit' };
+    const sub = (product.subcategory || '').toLowerCase();
+    const name = (product.name || '').toLowerCase();
+    const desc = (product.description || '').toLowerCase();
+
+    if (name.includes('polo') || sub.includes('polo') || desc.includes('polo')) {
+      return {
+        type: 'polo',
+        label: 'Polo Collar',
+        desc: 'Structured collar with comfortable classic fit',
+      };
+    }
+    if (sub === 'oversized' || name.includes('oversized') || desc.includes('oversized')) {
+      return {
+        type: 'oversized',
+        label: 'Oversized',
+        desc: 'Relaxed, drop-shoulder streetwear fit',
+      };
+    }
+    return {
+      type: 'regular',
+      label: 'Regular Fit',
+      desc: 'Standard regular half-sleeve everyday fit',
+    };
+  }, [product]);
+
+  const colorHasStock = (cName) =>
+    product?.sizes ? product.sizes.some((s) => getVariantQty(product, cName, s) > 0) : false;
+
+  // Initialize and synchronize color selection
   useEffect(() => {
-    if (!product) return;
+    if (!product || !product.colors?.length) return;
+
+    // 1. Check if URL parameter matches one of the product's colors
+    let selected = null;
+    if (urlColor) {
+      const match = product.colors.find(
+        (c) => c.name.toLowerCase() === urlColor.trim().toLowerCase()
+      );
+      if (match) selected = match.name;
+    }
+
+    // 2. If no valid URL color, find first in-stock color
+    if (!selected) {
+      const firstInStock = product.colors.find((c) => colorHasStock(c.name));
+      selected = firstInStock?.name || product.colors[0]?.name || null;
+    }
+
+    setColor(selected);
+
+    // Preselect first in-stock size for this color
+    if (selected && product.sizes?.length) {
+      const firstSizeInStock = product.sizes.find(
+        (s) => getVariantQty(product, selected, s) > 0
+      );
+      setSize(firstSizeInStock || product.sizes[0] || null);
+    }
+
     setImg(0);
     setQty(1);
-    // Preselect the first available combination.
-    const first = product.colors
-      .flatMap((c) => product.sizes.map((s) => ({ c: c.name, s })))
-      .find(({ c, s }) => getVariantQty(product, c, s) > 0);
-    setColor(first?.c ?? product.colors[0]?.name ?? null);
-    setSize(first?.s ?? null);
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id, product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve active color object and its color-specific images
+  const activeColorObj = useMemo(() => {
+    if (!product?.colors || !color) return null;
+    const found = product.colors.find((c) => {
+      const cName = typeof c === 'string' ? c : c?.name || c?.color;
+      return cName && cName.trim().toLowerCase() === color.trim().toLowerCase();
+    });
+    const target = found || product.colors[0];
+    if (!target) return null;
+    if (typeof target === 'string') {
+      const presetHex = COLOR_PRESETS.find(
+        (p) => p.name.toLowerCase() === target.toLowerCase()
+      )?.hex;
+      return { name: target, hex: presetHex || '#1B1517', images: [] };
+    }
+    return target;
+  }, [product, color]);
+
+  const activeVariant = useMemo(() => {
+    if (!product?.variants || !color) return null;
+    return product.variants.find(
+      (v) => (v.color || v.name || '').trim().toLowerCase() === color.trim().toLowerCase()
+    );
+  }, [product, color]);
+
+  // Dynamic gallery images: ONLY images for the selected color variant
+  const activeImages = useMemo(() => {
+    // 1. Direct color-specific images uploaded by admin or stored in database on color object
+    const colorImgs = activeColorObj?.images || (activeColorObj?.image ? [activeColorObj.image] : null);
+    if (Array.isArray(colorImgs) && colorImgs.length > 0) {
+      return colorImgs;
+    }
+
+    // 2. Virtual or direct variants images if populated from database
+    if (Array.isArray(activeVariant?.images) && activeVariant.images.length > 0) {
+      const isJustAllImages =
+        product?.colors?.length > 1 &&
+        JSON.stringify(activeVariant.images) === JSON.stringify(product?.images);
+      if (!isJustAllImages) {
+        return activeVariant.images;
+      }
+    }
+
+    // 3. Check if any image in product.images has the color name in its URL or filename
+    if (Array.isArray(product?.images) && product.images.length > 0 && color) {
+      const cLower = color.trim().toLowerCase();
+      const colorMatches = product.images.filter((url) => {
+        if (typeof url !== 'string') return false;
+        const filename = url.split('/').pop().toLowerCase();
+        return filename.includes(cLower);
+      });
+      if (colorMatches.length > 0) {
+        return colorMatches;
+      }
+    }
+
+    // 4. Fallback to product's actual uploaded images
+    return product?.images || [];
+  }, [activeColorObj, activeVariant, product, color]);
+
+  const currentImage = activeImages[img] ?? activeImages[0] ?? '';
 
   const available = product && color && size ? getVariantQty(product, color, size) : 0;
   const threshold = product?.lowStockThreshold ?? 5;
@@ -68,12 +185,13 @@ export default function ProductDetails() {
     );
 
   const sizeHasStock = (s) => (color ? getVariantQty(product, color, s) > 0 : false);
-  const colorHasStock = (c) => product.sizes.some((s) => getVariantQty(product, c, s) > 0);
   const totalAll = product.colors.reduce(
     (sum, c) => sum + product.sizes.reduce((n, s) => n + getVariantQty(product, c.name, s), 0), 0);
 
   const pickColor = (c) => {
     setColor(c);
+    setImg(0);
+    setSearchParams({ color: c }, { replace: true });
     // If the selected size is unavailable in this colour, move to an available one.
     if (getVariantQty(product, c, size) <= 0) {
       const alt = product.sizes.find((s) => getVariantQty(product, c, s) > 0);
@@ -132,27 +250,36 @@ export default function ProductDetails() {
         <span className="text-ink">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
+      <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
         {/* Gallery */}
-        <div className="grid gap-4 sm:grid-cols-[84px_1fr]">
-          <div className="no-scrollbar order-2 flex gap-3 overflow-x-auto sm:order-1 sm:flex-col sm:overflow-visible">
-            {product.images.map((src, i) => (
-              <button
-                key={i}
-                onClick={() => setImg(i)}
-                aria-label={`View image ${i + 1}`}
-                className={`aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-xl border-2 transition sm:w-full ${
-                  img === i ? 'border-burgundy shadow-soft' : 'border-transparent opacity-70 hover:opacity-100'
-                }`}
-              >
-                <img src={src} alt="" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-          <div className="relative order-1 overflow-hidden rounded-3xl bg-cream-dark shadow-soft sm:order-2">
-            <img src={product.images[img] ?? product.images[0]} alt={product.name} className="aspect-[4/5] w-full object-cover" />
+        <div className={`grid gap-4 self-start lg:sticky lg:top-24 ${activeImages?.length > 1 ? 'sm:grid-cols-[84px_1fr]' : ''}`}>
+          {activeImages?.length > 1 && (
+            <div className="no-scrollbar order-2 flex gap-3 overflow-x-auto sm:order-1 sm:flex-col sm:overflow-visible">
+              {activeImages.map((src, i) => (
+                <button
+                  key={`${color}-${i}`}
+                  onClick={() => setImg(i)}
+                  aria-label={`View ${color} image ${i + 1}`}
+                  className={`aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-xl border-2 transition sm:w-full ${
+                    img === i ? 'border-burgundy shadow-soft ring-1 ring-burgundy' : 'border-transparent opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img src={src} alt={`${product.name} in ${color}`} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="relative order-1 aspect-[4/5] w-full overflow-hidden rounded-3xl bg-cream-dark shadow-soft sm:order-2">
+            <img
+              key={`${color}-${img}`}
+              src={currentImage}
+              alt={`${product.name}${color ? ` - ${color}` : ''}`}
+              className="h-full w-full object-cover transition-opacity duration-300"
+            />
             {product.featured && (
-              <span className="absolute left-4 top-4 rounded-full bg-burgundy px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-cream">Featured</span>
+              <span className="absolute left-4 top-4 rounded-full bg-burgundy px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-cream">
+                Featured
+              </span>
             )}
           </div>
         </div>
@@ -180,23 +307,42 @@ export default function ProductDetails() {
 
           {/* Colour */}
           <div className="mt-6">
-            <p className="label">Color: <span className="normal-case tracking-normal text-ink">{color}</span></p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex items-center justify-between">
+              <p className="label !mb-0">
+                Color: <span className="font-semibold text-ink">{color}</span>
+              </p>
+              {activeImages.length > 0 && (
+                <span className="text-xs text-ink-soft">
+                  {activeImages.length} {activeImages.length === 1 ? 'image' : 'images'} for {color}
+                </span>
+              )}
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-3">
               {product.colors.map((c) => {
-                const ok = colorHasStock(c.name);
+                const cName = typeof c === 'string' ? c : c?.name || c?.color;
+                const cHex = typeof c === 'string' ? '#1B1517' : c?.hex || '#1B1517';
+                const ok = colorHasStock(cName);
+                const isSelected = color === cName;
                 return (
                   <button
-                    key={c.name}
-                    onClick={() => pickColor(c.name)}
-                    title={ok ? c.name : `${c.name} — sold out`}
-                    aria-label={`${c.name}${ok ? '' : ' (sold out)'}`}
-                    aria-pressed={color === c.name}
-                    className={`relative h-10 w-10 rounded-full border border-ink/20 transition ${
-                      color === c.name ? 'ring-2 ring-burgundy ring-offset-2 ring-offset-cream' : 'hover:scale-110'
+                    key={cName}
+                    type="button"
+                    onClick={() => pickColor(cName)}
+                    title={ok ? cName : `${cName} — sold out`}
+                    aria-label={`${cName}${ok ? '' : ' (sold out)'}`}
+                    aria-pressed={isSelected}
+                    className={`relative h-10 w-10 rounded-full border border-ink/20 transition-all ${
+                      isSelected
+                        ? 'ring-2 ring-burgundy ring-offset-2 ring-offset-cream scale-110 shadow-soft'
+                        : 'hover:scale-110 opacity-80 hover:opacity-100'
                     } ${ok ? '' : 'opacity-40'}`}
-                    style={{ background: c.hex }}
+                    style={{ background: cHex }}
                   >
-                    {!ok && <span className="absolute inset-0 flex items-center justify-center"><span className="h-px w-full rotate-45 bg-ink/60" /></span>}
+                    {!ok && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="h-px w-full rotate-45 bg-ink/60" />
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -205,8 +351,19 @@ export default function ProductDetails() {
 
           {/* Size */}
           <div className="mt-6">
-            <p className="label">Size: <span className="normal-case tracking-normal text-ink">{size}</span></p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center justify-between">
+              <p className="label !mb-0">Size: <span className="normal-case tracking-normal text-ink">{size}</span></p>
+              {productFit && (
+                <button
+                  type="button"
+                  onClick={() => setSizeChartOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-burgundy transition hover:text-burgundy-light hover:underline"
+                >
+                  <Ruler size={14} /> Size Chart ({productFit.label})
+                </button>
+              )}
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-2">
               {product.sizes.map((s) => {
                 const ok = sizeHasStock(s);
                 return (
@@ -229,6 +386,20 @@ export default function ProductDetails() {
                 );
               })}
             </div>
+            {productFit && (
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-ink/10 bg-cream-dark/50 px-3.5 py-2 text-xs">
+                <span className="flex items-center gap-1.5 text-ink-soft">
+                  <Shirt size={14} className="text-burgundy" /> {productFit.desc}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSizeChartOpen(true)}
+                  className="font-medium text-burgundy hover:underline"
+                >
+                  View measurements →
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Quantity */}
@@ -271,6 +442,13 @@ export default function ProductDetails() {
           </div>
         </section>
       )}
+
+      <SizeChartModal
+        isOpen={sizeChartOpen}
+        onClose={() => setSizeChartOpen(false)}
+        selectedSize={size}
+        initialType={productFit.type}
+      />
     </div>
   );
 }

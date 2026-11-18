@@ -1,17 +1,80 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Brush, Feather, Heart, Quote, Star } from 'lucide-react';
+import { ArrowRight, Brush, Feather, Heart } from 'lucide-react';
 import HeroCarousel from '../components/HeroCarousel';
 import CategoryMarquee from '../components/CategoryMarquee';
 import ProductCard from '../components/ProductCard';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import { ProductSkeleton, SectionHeading } from '../components/ui';
 import { useStore } from '../context/StoreContext';
-import { REVIEWS } from '../data/seed';
 import { openWhatsApp } from '../utils/whatsapp';
 
 export default function Home() {
   const { products, loading, settings } = useStore();
   const featured = products.filter((p) => p.featured).slice(0, 8);
+
+  // Fetch images from database products for the About section
+  const aboutImages = useMemo(() => {
+    // 1. If custom about images are configured in settings, prioritize them
+    if (settings?.aboutImage) {
+      return [
+        { src: settings.aboutImage, alt: settings.businessName || 'About our brand', id: 'setting-1' },
+        { src: settings.aboutImage2 || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80', alt: 'NOOLZ Craftsmanship', id: 'setting-2' },
+      ];
+    }
+
+    // 2. Fetch primary images from database products
+    const collected = [];
+    if (Array.isArray(products) && products.length > 0) {
+      for (const p of products) {
+        const validImg = Array.isArray(p.images)
+          ? p.images.find((img) => typeof img === 'string' && img.trim().length > 0)
+          : null;
+        if (validImg) {
+          collected.push({
+            src: validImg,
+            alt: p.name || 'NOOLZ apparel',
+            id: p.id || p._id || p.name,
+          });
+        }
+        if (collected.length >= 2) break;
+      }
+
+      // If only 1 product was found with an image, check if it has a second image
+      if (collected.length === 1) {
+        const p0 = products.find((p) => p.images && p.images.length > 1);
+        if (p0 && p0.images[1]) {
+          collected.push({
+            src: p0.images[1],
+            alt: p0.name || 'NOOLZ apparel',
+            id: `${p0.id || p0._id}-2`,
+          });
+        }
+      }
+    }
+
+    // 3. Fallback high-quality images if database has fewer than 2 images
+    const fallbacks = [
+      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80',
+    ];
+
+    if (collected.length === 0) {
+      return [
+        { src: fallbacks[0], alt: 'NOOLZ handcrafted apparel', id: 'fb-1' },
+        { src: fallbacks[1], alt: 'Original NOOLZ prints', id: 'fb-2' },
+      ];
+    }
+
+    if (collected.length === 1) {
+      return [
+        collected[0],
+        { src: fallbacks[1], alt: 'Original NOOLZ prints', id: 'fb-2' },
+      ];
+    }
+
+    return collected.slice(0, 2);
+  }, [products, settings]);
 
   return (
     <>
@@ -85,13 +148,32 @@ export default function Home() {
       {/* About */}
       <section className="container-page pt-24">
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="grid grid-cols-2 gap-4">
-            {[products[0], products[8]].map((p, i) =>
-              p ? (
-                <img key={p.id} src={p.images[i ? 1 : 2]} alt="" className={`aspect-[4/5] w-full rounded-3xl object-cover shadow-soft ${i ? 'mt-10' : ''}`} />
-              ) : null
-            )}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="aspect-[4/5] w-full rounded-3xl bg-cream-dark animate-pulse shadow-soft" />
+              <div className="aspect-[4/5] w-full rounded-3xl bg-cream-dark animate-pulse shadow-soft mt-10" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {aboutImages.map((img, i) => (
+                <div key={img.id || i} className={`relative overflow-hidden rounded-3xl bg-cream-dark shadow-soft ${i ? 'mt-10' : ''}`}>
+                  <img
+                    src={img.src}
+                    alt={img.alt}
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src =
+                        i === 0
+                          ? 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'
+                          : 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80';
+                    }}
+                    className="aspect-[4/5] w-full object-cover transition-transform duration-700 hover:scale-105"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div>
             <p className="eyebrow mb-3">About our brand</p>
             <h2 className="text-4xl font-semibold leading-tight sm:text-5xl">Stitched for you, one print at a time.</h2>
@@ -120,27 +202,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Reviews */}
-      <section className="container-page pt-24">
-        <SectionHeading eyebrow="Kind words" title="Loved by our customers" />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {REVIEWS.map((r) => (
-            <figure key={r.name} className="card relative flex flex-col p-6 transition-transform duration-500 hover:-translate-y-1">
-              <Quote size={28} className="text-gold/60" />
-              <div className="mt-3 flex gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={14} className={i < r.rating ? 'fill-gold text-gold' : 'text-ink/20'} />
-                ))}
-              </div>
-              <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-ink/80">"{r.text}"</blockquote>
-              <figcaption className="mt-5 border-t border-ink/10 pt-4">
-                <p className="font-medium">{r.name}</p>
-                <p className="text-xs text-ink-soft">{r.location} · {r.item}</p>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

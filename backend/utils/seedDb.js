@@ -52,6 +52,11 @@ const buildStock = (colors, sizes, seed, zeroKeys = [], lowKeys = []) => {
 
 const def = (name, category, price, colors, design, description, featured, seed, extra = {}, subcategory = null) => {
   const sizes = SIZES[category];
+  const enrichedColors = colors.map((c) => ({
+    ...c,
+    images: makeImages({ kind: category, color: c.hex, design }),
+  }));
+  const allImages = enrichedColors.flatMap((c) => c.images);
   return {
     name,
     category,
@@ -60,10 +65,10 @@ const def = (name, category, price, colors, design, description, featured, seed,
     description,
     featured,
     lowStockThreshold: 5,
-    colors,
+    colors: enrichedColors,
     sizes,
     design,
-    images: makeImages({ kind: category, color: colors[0].hex, design }),
+    images: allImages,
     stock: buildStock(colors, sizes, seed, extra.zero || [], extra.low || []),
   };
 };

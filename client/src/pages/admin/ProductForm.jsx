@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ImagePlus, Plus, Save, Star, Trash2, UploadCloud, X } from 'lucide-react';
+import {
+  ImagePlus,
+  Plus,
+  Save,
+  Star,
+  Trash2,
+  UploadCloud,
+  X,
+  Eye,
+  ArrowLeft,
+  ArrowRight,
+  Palette,
+} from 'lucide-react';
 import { COLOR_PRESETS, CATEGORIES, SIZE_OPTIONS } from '../../config/site';
 import { useStore } from '../../context/StoreContext';
 import { useToast } from '../../context/ToastContext';
@@ -18,12 +30,37 @@ const blank = () => ({
   price: '',
   images: [],
   sizes: [...SIZE_OPTIONS.men],
-  colors: [COLOR_PRESETS[0], COLOR_PRESETS[1]],
+  colors: [
+    { ...COLOR_PRESETS[0], images: [] },
+    { ...COLOR_PRESETS[1], images: [] },
+  ],
   featured: false,
   lowStockThreshold: 5,
   stock: {},
   design: 'sunrise',
 });
+
+const normalizeProduct = (p) => {
+  if (!p) return blank();
+  const cloned = structuredClone(p);
+  // Ensure each color has an images array
+  cloned.colors = (cloned.colors || []).map((c, idx) => {
+    if (Array.isArray(c.images) && c.images.length > 0) {
+      return c;
+    }
+    // Backward compatibility: If no color has images, assign existing product.images to the first color
+    if (idx === 0 && Array.isArray(cloned.images) && cloned.images.length > 0) {
+      return { ...c, images: [...cloned.images] };
+    }
+    return { ...c, images: [] };
+  });
+
+  const allColorImages = cloned.colors.flatMap((c) => c.images || []);
+  if (!cloned.images?.length && allColorImages.length) {
+    cloned.images = allColorImages;
+  }
+  return cloned;
+};
 
 const Section = ({ title, children, hint }) => (
   <section className="card p-6">
@@ -41,7 +78,9 @@ export default function ProductForm() {
   const toast = useToast();
   const existing = products.find((p) => p.id === id);
 
-  const [form, setForm] = useState(() => (existing ? structuredClone(existing) : blank()));
+  const [form, setForm] = useState(() => normalizeProduct(existing));
+  const [activeColorTab, setActiveColorTab] = useState(() => form.colors?.[0]?.name || COLOR_PRESETS[0].name);
+  const [previewImage, setPreviewImage] = useState(null);
   const [defaultQty, setDefaultQty] = useState(10);
   const [errors, setErrors] = useState({});
   const [uploading, setUploading] = useState(false);
@@ -49,9 +88,18 @@ export default function ProductForm() {
   const [customColor, setCustomColor] = useState({ name: '', hex: '#8A0B45' });
 
   useEffect(() => {
-    setForm(existing ? structuredClone(existing) : blank());
+    const normalized = normalizeProduct(existing);
+    setForm(normalized);
+    setActiveColorTab(normalized.colors[0]?.name || '');
     setErrors({});
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id, existing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep activeColorTab valid when colors change
+  useEffect(() => {
+    if (form.colors.length > 0 && !form.colors.some((c) => c.name === activeColorTab)) {
+      setActiveColorTab(form.colors[0].name);
+    }
+  }, [form.colors, activeColorTab]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const qtyOf = (c, s) => form.stock[variantKey(c, s)] ?? 0;
@@ -62,6 +110,94 @@ export default function ProductForm() {
     () => Array.from(new Set([...SIZE_OPTIONS[form.category], ...form.sizes])),
     [form.category, form.sizes]
   );
+
+  const updateColorImages = (colorName, newImages) => {
+    const updatedColors = form.colors.map((c) =>
+      c.name === colorName ? { ...c, images: newImages } : c
+    );
+    const flatImages = updatedColors.flatMap((c) => c.images || []);
+    set({ colors: updatedColors, images: flatImages });
+  };
+
+  const onColorFiles = async (colorName, e) => {
+    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+    e.target.value = '';
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const res = await api.products.uploadImages(files);
+      if (res.success && res.images?.length) {
+        const colorObj = form.colors.find((c) => c.name === colorName);
+        const existingImgs = colorObj?.images || [];
+        updateColorImages(colorName, [...existingImgs, ...res.images]);
+        toast(`${res.images.length} image(s) uploaded for ${colorName}.`);
+      }
+    } catch (err) {
+      console.warn('Cloudinary upload fallback to data URL:', err);
+      try {
+        const urls = await Promise.all(files.map((f) => fileToDataUrl(f)));
+        const colorObj = form.colors.find((c) => c.name === colorName);
+        const existingImgs = colorObj?.images || [];
+        updateColorImages(colorName, [...existingImgs, ...urls]);
+        toast(`${urls.length} image(s) processed for ${colorName}.`);
+      } catch {
+        toast('One of the images could not be read.', 'error');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const makeColorPrimary = (colorName, imgIndex) => {
+    const colorObj = form.colors.find((c) => c.name === colorName);
+    if (!colorObj || !colorObj.images) return;
+    const imgs = colorObj.images;
+    const reordered = [imgs[imgIndex], ...imgs.filter((_, i) => i !== imgIndex)];
+    updateColorImages(colorName, reordered);
+  };
+
+  const moveColorImage = (colorName, fromIndex, toIndex) => {
+    const colorObj = form.colors.find((c) => c.name === colorName);
+    if (!colorObj || !colorObj.images) return;
+    const imgs = [...colorObj.images];
+    if (toIndex < 0 || toIndex >= imgs.length) return;
+    const [moved] = imgs.splice(fromIndex, 1);
+    imgs.splice(toIndex, 0, moved);
+    updateColorImages(colorName, imgs);
+  };
+
+  const removeColorImg = (colorName, imgIndex) => {
+    const colorObj = form.colors.find((c) => c.name === colorName);
+    if (!colorObj || !colorObj.images) return;
+    const updated = colorObj.images.filter((_, i) => i !== imgIndex);
+    updateColorImages(colorName, updated);
+  };
+
+  const useSampleForColor = (colorName) => {
+    const colorObj = form.colors.find((c) => c.name === colorName);
+    if (!colorObj) return;
+    const sampleImgs = makeImages({
+      kind: form.category,
+      color: colorObj.hex || '#FFFFFF',
+      design: form.design,
+    });
+    updateColorImages(colorName, sampleImgs);
+    toast(`Generated sample mockups for ${colorName}.`);
+  };
+
+  const useSampleForAllColors = () => {
+    const updatedColors = form.colors.map((c) => ({
+      ...c,
+      images: makeImages({
+        kind: form.category,
+        color: c.hex || '#FFFFFF',
+        design: form.design,
+      }),
+    }));
+    const flatImages = updatedColors.flatMap((c) => c.images);
+    set({ colors: updatedColors, images: flatImages });
+    toast('Generated sample mockups for all colours.');
+  };
 
   if (editing && !existing)
     return <EmptyState title="Product not found" message="It may have been deleted." action={<Link to="/admin/products" className="btn-primary">Back to products</Link>} />;
@@ -94,15 +230,21 @@ export default function ProductForm() {
   };
   const toggleColor = (c) => {
     const has = form.colors.some((x) => x.name === c.name);
-    const colors = has ? form.colors.filter((x) => x.name !== c.name) : [...form.colors, c];
-    set({ colors, stock: withDefaults(colors, form.sizes, form.stock) });
+    const colors = has
+      ? form.colors.filter((x) => x.name !== c.name)
+      : [...form.colors, { name: c.name, hex: c.hex, images: c.images || [] }];
+    const flatImages = colors.flatMap((col) => col.images || []);
+    set({ colors, images: flatImages, stock: withDefaults(colors, form.sizes, form.stock) });
+    if (!has) setActiveColorTab(c.name);
   };
   const addCustomColor = () => {
     const name = customColor.name.trim();
     if (!name) return toast('Give the colour a name.', 'error');
     if (form.colors.some((c) => c.name.toLowerCase() === name.toLowerCase())) return toast('That colour already exists.', 'error');
-    const colors = [...form.colors, { name, hex: customColor.hex }];
-    set({ colors, stock: withDefaults(colors, form.sizes, form.stock) });
+    const colors = [...form.colors, { name, hex: customColor.hex, images: [] }];
+    const flatImages = colors.flatMap((col) => col.images || []);
+    set({ colors, images: flatImages, stock: withDefaults(colors, form.sizes, form.stock) });
+    setActiveColorTab(name);
     setCustomColor({ name: '', hex: '#8A0B45' });
   };
 
@@ -112,40 +254,13 @@ export default function ProductForm() {
     set({ stock });
   };
 
-  const onFiles = async (e) => {
-    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
-    e.target.value = '';
-    if (!files.length) return;
-    setUploading(true);
-    try {
-      const res = await api.products.uploadImages(files);
-      if (res.success && res.images?.length) {
-        set({ images: [...form.images, ...res.images] });
-        toast(`${res.images.length} image(s) uploaded to Cloudinary.`);
-      }
-    } catch (err) {
-      console.warn('Cloudinary upload fallback to data URL:', err);
-      try {
-        const urls = await Promise.all(files.map((f) => fileToDataUrl(f)));
-        set({ images: [...form.images, ...urls] });
-      } catch {
-        toast('One of the images could not be read.', 'error');
-      }
-    } finally {
-      setUploading(false);
-    }
-  };
-  const makeCover = (i) => set({ images: [form.images[i], ...form.images.filter((_, j) => j !== i)] });
-  const removeImg = (i) => set({ images: form.images.filter((_, j) => j !== i) });
-  const useSample = () =>
-    set({ images: makeImages({ kind: form.category, color: form.colors[0]?.hex ?? '#FFFFFF', design: form.design }) });
-
   const validate = () => {
     const e = {};
     if (form.name.trim().length < 3) e.name = 'Enter a product name (min 3 characters).';
     if (form.description.trim().length < 10) e.description = 'Add a short description (min 10 characters).';
     if (!(Number(form.price) > 0)) e.price = 'Enter a price greater than 0.';
-    if (!form.images.length) e.images = 'Upload at least one image (or use a sample mockup).';
+    const totalColorImages = (form.colors || []).reduce((sum, c) => sum + (c.images?.length || 0), 0);
+    if (!totalColorImages && !form.images?.length) e.images = 'Upload at least one image for your colors (or generate sample mockups).';
     if (!form.sizes.length) e.sizes = 'Select at least one size.';
     if (!form.colors.length) e.colors = 'Select at least one colour.';
     if (!(Number(form.lowStockThreshold) >= 0)) e.threshold = 'Threshold must be 0 or more.';
@@ -161,8 +276,10 @@ export default function ProductForm() {
     // Only keep stock for current variants.
     const stock = {};
     form.colors.forEach((c) => form.sizes.forEach((s) => (stock[variantKey(c.name, s)] = qtyOf(c.name, s))));
+    const flatImages = form.colors.flatMap((c) => c.images || []);
     const data = {
       ...form,
+      images: flatImages.length ? flatImages : form.images,
       name: form.name.trim(),
       description: form.description.trim(),
       price: Number(form.price),
@@ -185,6 +302,8 @@ export default function ProductForm() {
 
   const err = (k) => errors[k] && <p className="mt-1 text-xs text-red-600" role="alert">{errors[k]}</p>;
   const cls = (k) => `input ${errors[k] ? 'input-error' : ''}`;
+  const activeColorObj = form.colors.find((c) => c.name === activeColorTab) || form.colors[0];
+  const activeColorImages = activeColorObj?.images || [];
 
   return (
     <form onSubmit={submit} noValidate className="mx-auto max-w-5xl space-y-6">
@@ -233,36 +352,279 @@ export default function ProductForm() {
         </div>
       </Section>
 
-      <Section title="Images" hint="The first image is the cover. Large portrait images (4:5) look best.">
-        <label className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition hover:border-burgundy hover:bg-cream-dark/50 ${errors.images ? 'border-red-400' : 'border-ink/20'}`}>
-          <UploadCloud size={30} className="text-burgundy" />
-          <span className="mt-2 text-sm font-medium">{uploading ? 'Processing…' : 'Click to upload images'}</span>
-          <span className="text-xs text-ink-soft">PNG or JPG · multiple files allowed</span>
-          <input type="file" accept="image/*" multiple className="sr-only" onChange={onFiles} />
-        </label>
-        {err('images')}
-        {form.images.length > 0 && (
-          <ul className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {form.images.map((src, i) => (
-              <li key={i} className="group relative overflow-hidden rounded-xl border border-ink/10 bg-cream-dark">
-                <img src={src} alt={`Preview ${i + 1}`} className="aspect-[4/5] w-full object-cover" />
-                {i === 0 && <span className="absolute left-2 top-2 rounded-full bg-burgundy px-2 py-0.5 text-[10px] uppercase tracking-wider text-cream">Cover</span>}
-                <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-ink/70 to-transparent p-2 pt-6 opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
-                  {i !== 0 && <button type="button" onClick={() => makeCover(i)} title="Make cover" className="rounded-full bg-white/90 p-1.5 hover:bg-white"><Star size={14} /></button>}
-                  <button type="button" onClick={() => removeImg(i)} title="Remove" className="rounded-full bg-white/90 p-1.5 text-red-600 hover:bg-white"><Trash2 size={14} /></button>
+      <Section
+        title="Color-Specific Images"
+        hint="Upload and manage images separately for each colour variant. The first image in each colour is its cover."
+      >
+        {form.colors.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-ink/20 p-8 text-center">
+            <Palette className="mx-auto text-ink-soft" size={32} />
+            <p className="mt-2 text-sm text-ink-soft">
+              Select or add at least one colour below in &ldquo;Sizes & colours&rdquo; to upload color-specific images.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Color Tabs */}
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                Select colour to manage images
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {form.colors.map((c) => {
+                  const isActive = activeColorObj?.name === c.name;
+                  const count = c.images?.length || 0;
+                  return (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setActiveColorTab(c.name)}
+                      className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                        isActive
+                          ? 'border-burgundy bg-burgundy text-cream shadow-sm'
+                          : 'border-ink/20 bg-white/80 text-ink hover:border-burgundy'
+                      }`}
+                    >
+                      <span
+                        className="h-4 w-4 rounded-full border border-black/20"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      <span>{c.name}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isActive ? 'bg-cream/20 text-cream' : 'bg-ink/10 text-ink-soft'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Active Color Image Management Panel */}
+            {activeColorObj && (
+              <div className="rounded-2xl border border-ink/10 bg-cream/40 p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-5 w-5 rounded-full border border-ink/20 shadow-sm"
+                      style={{ backgroundColor: activeColorObj.hex }}
+                    />
+                    <h3 className="text-lg font-semibold text-ink">
+                      {activeColorObj.name} Images
+                    </h3>
+                    <span className="text-xs text-ink-soft">
+                      ({activeColorImages.length} image{activeColorImages.length === 1 ? '' : 's'})
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => useSampleForColor(activeColorObj.name)}
+                      className="btn-outline btn-sm text-xs"
+                      title={`Generate mockups for ${activeColorObj.name}`}
+                    >
+                      <ImagePlus size={14} className="text-gold-dark" />
+                      Sample for {activeColorObj.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={useSampleForAllColors}
+                      className="btn-outline btn-sm text-xs"
+                      title="Generate mockups for all colors at once"
+                    >
+                      Sample for All Colours
+                    </button>
+                  </div>
                 </div>
-              </li>
-            ))}
-          </ul>
+
+                {/* Upload Box for Active Color */}
+                <label
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-7 text-center transition hover:border-burgundy hover:bg-cream-dark/50 ${
+                    errors.images ? 'border-red-400' : 'border-ink/20'
+                  }`}
+                >
+                  <UploadCloud size={28} className="text-burgundy" />
+                  <span className="mt-2 text-sm font-medium">
+                    {uploading ? 'Processing…' : `Click to upload images for ${activeColorObj.name}`}
+                  </span>
+                  <span className="text-xs text-ink-soft">
+                    PNG, JPG, WEBP · multiple files allowed
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    onChange={(e) => onColorFiles(activeColorObj.name, e)}
+                  />
+                </label>
+
+                {/* Active Color Thumbnails Grid */}
+                {activeColorImages.length > 0 ? (
+                  <div className="mt-5">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-ink-soft">
+                      {activeColorObj.name} Gallery ({activeColorImages.length}) — First image is the primary cover
+                    </p>
+                    <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                      {activeColorImages.map((src, i) => (
+                        <li
+                          key={i}
+                          className="group relative overflow-hidden rounded-xl border border-ink/10 bg-cream-dark shadow-sm"
+                        >
+                          <img
+                            src={src}
+                            alt={`${activeColorObj.name} ${i + 1}`}
+                            className="aspect-[4/5] w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                          {i === 0 && (
+                            <span className="absolute left-2 top-2 z-10 rounded-full bg-burgundy px-2 py-0.5 text-[10px] uppercase tracking-wider text-cream shadow">
+                              Cover
+                            </span>
+                          )}
+
+                          {/* Quick action bar */}
+                          <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between bg-gradient-to-t from-ink/80 via-ink/50 to-transparent p-2 pt-6 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                            {/* Reorder Arrows */}
+                            <div className="flex gap-1">
+                              {i > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => moveColorImage(activeColorObj.name, i, i - 1)}
+                                  title="Move earlier"
+                                  className="rounded-full bg-white/90 p-1.5 text-ink transition hover:bg-white"
+                                >
+                                  <ArrowLeft size={13} />
+                                </button>
+                              )}
+                              {i < activeColorImages.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => moveColorImage(activeColorObj.name, i, i + 1)}
+                                  title="Move later"
+                                  className="rounded-full bg-white/90 p-1.5 text-ink transition hover:bg-white"
+                                >
+                                  <ArrowRight size={13} />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Cover, Preview, Delete */}
+                            <div className="flex gap-1">
+                              {i !== 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => makeColorPrimary(activeColorObj.name, i)}
+                                  title="Set as cover for this color"
+                                  className="rounded-full bg-white/90 p-1.5 text-ink transition hover:bg-white hover:text-burgundy"
+                                >
+                                  <Star size={13} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage(src)}
+                                title="Preview full image"
+                                className="rounded-full bg-white/90 p-1.5 text-ink transition hover:bg-white"
+                              >
+                                <Eye size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeColorImg(activeColorObj.name, i)}
+                                title="Remove image"
+                                className="rounded-full bg-white/90 p-1.5 text-red-600 transition hover:bg-white"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-center text-xs text-ink-soft">
+                    No images uploaded for {activeColorObj.name} yet. Upload above or generate a sample mockup.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* All-Colors Overview Grid */}
+            {form.colors.length > 1 && (
+              <div className="rounded-2xl border border-ink/10 bg-white/60 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                  All Color Variants Overview
+                </p>
+                <div className="space-y-3">
+                  {form.colors.map((c) => (
+                    <div
+                      key={c.name}
+                      onClick={() => setActiveColorTab(c.name)}
+                      className={`flex cursor-pointer items-center justify-between rounded-xl p-2.5 transition hover:bg-cream-dark/50 ${
+                        activeColorObj?.name === c.name ? 'bg-cream-dark/60 ring-1 ring-burgundy/30' : 'bg-cream/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="h-5 w-5 rounded-full border border-ink/20"
+                          style={{ backgroundColor: c.hex }}
+                        />
+                        <span className="text-sm font-medium text-ink">{c.name}</span>
+                        <span className="text-xs text-ink-soft">
+                          {c.images?.length || 0} image{(c.images?.length || 0) === 1 ? '' : 's'}
+                        </span>
+                      </div>
+
+                      <div className="flex max-w-[50%] items-center gap-1.5 overflow-x-auto py-1">
+                        {(c.images || []).slice(0, 5).map((imgSrc, idx) => (
+                          <img
+                            key={idx}
+                            src={imgSrc}
+                            alt=""
+                            className="h-10 w-8 rounded border border-ink/10 object-cover"
+                          />
+                        ))}
+                        {(c.images?.length || 0) > 5 && (
+                          <span className="text-xs font-semibold text-ink-soft">
+                            +{(c.images?.length || 0) - 5}
+                          </span>
+                        )}
+                        {(!c.images || c.images.length === 0) && (
+                          <span className="text-xs italic text-red-500">No images</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sample Mockup Preset Selector */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-cream-dark/70 p-4 text-sm">
+              <ImagePlus size={18} className="text-gold-dark" />
+              <span className="text-ink-soft">Design preset for mockups:</span>
+              <select
+                className="input !w-auto !py-1.5"
+                value={form.design}
+                onChange={(e) => set({ design: e.target.value })}
+                aria-label="Sample design"
+              >
+                {DESIGN_KEYS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {err('images')}
+          </div>
         )}
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-cream-dark/70 p-4 text-sm">
-          <ImagePlus size={18} className="text-gold-dark" />
-          <span className="text-ink-soft">No photos yet? Generate sample mockups:</span>
-          <select className="input !w-auto !py-1.5" value={form.design} onChange={(e) => set({ design: e.target.value })} aria-label="Sample design">
-            {DESIGN_KEYS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <button type="button" onClick={useSample} className="btn-outline btn-sm">Use sample images</button>
-        </div>
       </Section>
 
       <Section title="Sizes & colours" hint="Add or remove options. Stock rows below update automatically.">
@@ -354,6 +716,33 @@ export default function ProductForm() {
         <Link to="/admin/products" className="btn-outline">Cancel</Link>
         <button type="submit" className="btn-primary"><Save size={16} /> {editing ? 'Save Changes' : 'Save Product'}</button>
       </div>
+
+      {/* Lightbox Preview Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-xl overflow-hidden rounded-2xl bg-cream shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute right-3 top-3 z-10 rounded-full bg-black/60 p-2 text-white transition hover:bg-black/90"
+              aria-label="Close preview"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={previewImage}
+              alt="Full preview"
+              className="max-h-[85vh] w-auto object-contain"
+            />
+          </div>
+        </div>
+      )}
     </form>
   );
 }

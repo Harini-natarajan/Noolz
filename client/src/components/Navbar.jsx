@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, X, ArrowRight } from 'lucide-react';
+import { ChevronDown, Menu, X, ArrowRight, Instagram } from 'lucide-react';
 import Logo from './Logo';
 import WhatsAppIcon from './WhatsAppIcon';
 import { useStore } from '../context/StoreContext';
@@ -289,7 +289,7 @@ export default function Navbar() {
             </NavLink>
           </nav>
 
-          {/* Right side: WhatsApp Button + Mobile Menu toggle */}
+          {/* Right side: WhatsApp Button + Instagram Link + Mobile Menu toggle */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* WhatsApp Button with Softer Green styling */}
             <button
@@ -301,6 +301,19 @@ export default function Navbar() {
               <WhatsAppIcon size={16} className="text-[#1A6C3E] transition-colors group-hover:text-white" />
               <span className="tracking-wide">WhatsApp</span>
             </button>
+
+            {/* Instagram Button */}
+            <a
+              href={settings.instagram || 'https://instagram.com/noolz.co.in'}
+              target="_blank"
+              rel="noreferrer"
+              className="group inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#E1306C]/30 bg-[#E1306C]/10 px-2.5 py-1.5 text-xs font-medium text-[#C13584] shadow-xs transition-all duration-300 hover:border-[#E1306C] hover:bg-gradient-to-r hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] hover:text-white sm:px-4 sm:py-2 md:text-xs lg:text-sm"
+              aria-label="Follow us on Instagram @noolz.co.in"
+              title="Instagram @noolz.co.in"
+            >
+              <Instagram size={16} className="text-[#C13584] transition-colors group-hover:text-white" />
+              <span className="tracking-wide hidden xs:inline sm:inline">Instagram</span>
+            </a>
 
             {/* Mobile hamburger button (< 768px: md:hidden) */}
             <button
@@ -542,8 +555,8 @@ export default function Navbar() {
           </nav>
         </div>
 
-        {/* Bottom Area: Softer green WhatsApp CTA button */}
-        <div className="shrink-0 border-t border-ink/10 bg-cream px-5 sm:px-6 py-4">
+        {/* Bottom Area: Softer green WhatsApp CTA button & Instagram CTA button */}
+        <div className="shrink-0 space-y-2.5 border-t border-ink/10 bg-cream px-5 sm:px-6 py-4">
           <button
             onClick={() => {
               setMobileOpen(false);
@@ -554,6 +567,16 @@ export default function Navbar() {
             <WhatsAppIcon size={18} />
             <span>Chat & Order on WhatsApp</span>
           </button>
+          <a
+            href={settings.instagram || 'https://instagram.com/noolz.co.in'}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setMobileOpen(false)}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-[#E1306C]/30 bg-[#E1306C]/10 py-2.5 text-sm font-medium text-[#C13584] transition hover:bg-gradient-to-r hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] hover:text-white active:scale-[0.99]"
+          >
+            <Instagram size={18} />
+            <span>Follow on Instagram (@noolz.co.in)</span>
+          </a>
         </div>
       </div>
     </>

@@ -145,7 +145,12 @@ export const createProduct = async (req, res, next) => {
       }
     }
 
-    const finalImages = [...(images || []), ...uploadedUrls];
+    // Gather color-specific images if available
+    const colorImages = Array.isArray(colors)
+      ? colors.flatMap((c) => (Array.isArray(c.images) ? c.images : []))
+      : [];
+
+    const finalImages = Array.from(new Set([...(images || []), ...colorImages, ...uploadedUrls].filter(Boolean)));
 
     if (!finalImages.length) {
       return res.status(400).json({
@@ -301,9 +306,17 @@ export const updateProduct = async (req, res, next) => {
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = Number(price);
     if (discountPrice !== undefined) product.discountPrice = discountPrice ? Number(discountPrice) : null;
+    if (colors !== undefined) {
+      product.colors = colors;
+      const colorImages = Array.isArray(colors)
+        ? colors.flatMap((c) => (Array.isArray(c.images) ? c.images : []))
+        : [];
+      if (colorImages.length > 0 && (!images || images.length === 0)) {
+        images = colorImages;
+      }
+    }
     if (images !== undefined) product.images = images;
     if (sizes !== undefined) product.sizes = sizes;
-    if (colors !== undefined) product.colors = colors;
     if (stock !== undefined) product.stock = newStockMap;
     if (lowStockThreshold !== undefined) product.lowStockThreshold = Number(lowStockThreshold);
     if (featured !== undefined) product.featured = Boolean(featured);

@@ -12,6 +12,7 @@ export default function AdminSettings() {
   const [errors, setErrors] = useState({});
   const [confirmReset, setConfirmReset] = useState(false);
   const fileRef = useRef(null);
+  const aboutFileRef = useRef(null);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -49,6 +50,18 @@ export default function AdminSettings() {
     }
   };
 
+  const onAboutImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await fileToDataUrl(file, 1000, 0.85);
+      setForm((f) => ({ ...f, aboutImage: url }));
+    } catch {
+      toast('Could not read that image.', 'error');
+    }
+  };
+
   const err = (k) => errors[k] && <p className="mt-1 text-xs text-red-600" role="alert">{errors[k]}</p>;
   const cls = (k) => `input ${errors[k] ? 'input-error' : ''}`;
 
@@ -67,6 +80,38 @@ export default function AdminSettings() {
               <button type="button" onClick={() => setForm((f) => ({ ...f, logo: '/logo.png' }))} className="btn-outline btn-sm ml-2">Use default</button>
             )}
             <p className="text-xs text-ink-soft">PNG or JPG. Logos with a white background blend into the cream theme.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="text-2xl font-semibold">About brand photo (optional)</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          By default, photos in the "About our brand" section are automatically fetched from your database products. You can also upload a dedicated brand photo here.
+        </p>
+        <div className="mt-5 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          <div className="flex h-32 w-28 items-center justify-center rounded-2xl border border-ink/10 bg-cream p-1 overflow-hidden">
+            {form.aboutImage ? (
+              <img src={form.aboutImage} alt="About preview" className="h-full w-full rounded-xl object-cover" />
+            ) : (
+              <span className="text-xs text-ink-soft text-center px-2">From database</span>
+            )}
+          </div>
+          <div className="space-y-2">
+            <input ref={aboutFileRef} type="file" accept="image/*" className="sr-only" onChange={onAboutImage} />
+            <button type="button" onClick={() => aboutFileRef.current?.click()} className="btn-outline btn-sm">
+              <Upload size={14} /> Upload photo
+            </button>
+            {form.aboutImage && (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, aboutImage: '' }))}
+                className="btn-outline btn-sm ml-2 text-burgundy"
+              >
+                Clear (use database)
+              </button>
+            )}
+            <p className="text-xs text-ink-soft">Leave blank to automatically display items from your product database.</p>
           </div>
         </div>
       </section>

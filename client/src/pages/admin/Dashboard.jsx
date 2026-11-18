@@ -123,7 +123,11 @@ export default function Dashboard() {
           <ul className="divide-y divide-ink/5">
             {recent.map((p) => (
               <li key={p.id} className="flex items-center gap-4 px-6 py-3">
-                <img src={p.images[0]} alt="" className="h-14 w-12 shrink-0 rounded-lg object-cover" />
+                <img
+                  src={p.images?.[0] || p.colors?.[0]?.images?.[0] || ''}
+                  alt=""
+                  className="h-14 w-12 shrink-0 rounded-lg object-cover"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{p.name}</p>
                   <p className="text-xs text-ink-soft">{categoryName(p.category)} · {formatDateTime(p.createdAt)}</p>

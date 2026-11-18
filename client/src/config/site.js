@@ -8,11 +8,12 @@ export const SITE_DEFAULTS = {
   whatsappNumber: '919585123004',
   phoneNumber: '+91 9585123004',
   email: 'Hellonoolz.in@gmail.com',
-  instagram: 'https://instagram.com/noolz_in',
-  instagramHandle: 'noolz_in',
+  instagram: 'https://instagram.com/noolz.co.in',
+  instagramHandle: 'noolz.co.in',
   address: 'Mecheri, Salem - 636 453',
   hours: 'Mon – Sat, 10:00 AM – 7:00 PM',
   logo: '/logo.png',
+  aboutImage: '',
 };
 
 export const sanitizeWhatsAppNumber = (number) =>

@@ -30,11 +30,13 @@ export const variantRows = (product) =>
   product.colors.flatMap((c) =>
     product.sizes.map((s) => {
       const qty = getVariantQty(product, c.name, s);
+      const colorImg = (Array.isArray(c.images) && c.images[0]) || product.images?.[0] || '';
       return {
         productId: product.id,
         product,
         color: c.name,
         hex: c.hex,
+        image: colorImg,
         size: s,
         qty,
         status: getStatus(qty, product.lowStockThreshold),

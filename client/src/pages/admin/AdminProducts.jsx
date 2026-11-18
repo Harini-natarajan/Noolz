@@ -73,7 +73,11 @@ export default function AdminProducts() {
                   <tr key={p.id} className="transition hover:bg-cream/70">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <img src={p.images[0]} alt="" className="h-14 w-12 rounded-lg object-cover" />
+                        <img
+                          src={p.images?.[0] || p.colors?.[0]?.images?.[0] || ''}
+                          alt=""
+                          className="h-14 w-12 rounded-lg object-cover"
+                        />
                         <div>
                           <p className="font-medium">{p.name}</p>
                           {p.featured && <span className="text-[11px] uppercase tracking-wider text-gold-dark">★ Featured</span>}

@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import WhatsAppIcon from './WhatsAppIcon';
@@ -8,24 +9,78 @@ import { buildQuickMessage, openWhatsApp, getAdminWhatsAppNumber } from '../util
 
 export default function ProductCard({ product }) {
   const { settings } = useStore();
+  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || null);
   const status = productStatus(product);
   const out = status === 'out';
 
-  const quickOrder = () =>
-    openWhatsApp(getAdminWhatsAppNumber(settings?.whatsappNumber), buildQuickMessage({ product }));
+  // Find images for the active selected color
+  const activeColorObj = useMemo(() => {
+    if (!product?.colors?.length) return null;
+    return (
+      product.colors.find(
+        (c) => (c.name || c.color || c).toLowerCase() === (selectedColor || '').toLowerCase()
+      ) || product.colors[0]
+    );
+  }, [product, selectedColor]);
+
+  const colorImages = useMemo(() => {
+    // 1. Direct color-specific images
+    const colorImgs =
+      activeColorObj?.images || (activeColorObj?.image ? [activeColorObj.image] : null);
+    if (Array.isArray(colorImgs) && colorImgs.length > 0) {
+      return colorImgs;
+    }
+
+    // 2. Check product.images matching color name
+    if (Array.isArray(product?.images) && product.images.length > 0 && selectedColor) {
+      const cLower = selectedColor.trim().toLowerCase();
+      const match = product.images.find((url) => {
+        if (typeof url !== 'string') return false;
+        return url.split('/').pop().toLowerCase().includes(cLower);
+      });
+      if (match) return [match];
+
+      // 3. Map by index if multiple colors
+      const colorIdx = (product.colors || []).findIndex((c) => {
+        const cName = typeof c === 'string' ? c : c?.name || c?.color;
+        return cName && cName.trim().toLowerCase() === cLower;
+      });
+      if (colorIdx >= 0 && colorIdx < product.images.length && (product.colors || []).length > 1) {
+        return [product.images[colorIdx]];
+      }
+    }
+
+    return product?.images || [];
+  }, [activeColorObj, product, selectedColor]);
+
+  const primaryImage = colorImages[0] || product.images?.[0] || '';
+  const secondaryImage = colorImages[1] || (colorImages.length === 1 ? null : product.images?.[1]);
+
+  const productLink = `/product/${product.id || product._id}${
+    selectedColor ? `?color=${encodeURIComponent(selectedColor)}` : ''
+  }`;
+
+  const quickOrder = () => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${productLink}` : '';
+    openWhatsApp(
+      getAdminWhatsAppNumber(settings?.whatsappNumber),
+      buildQuickMessage({ product, productUrl: url })
+    );
+  };
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-soft transition-all duration-500 hover:-translate-y-1 hover:shadow-lift">
-      <Link to={`/product/${product.id}`} className="relative block aspect-[4/5] overflow-hidden bg-cream-dark">
+      <Link to={productLink} className="relative block aspect-[4/5] overflow-hidden bg-cream-dark">
         <img
-          src={product.images[0]}
-          alt={product.name}
+          key={primaryImage}
+          src={primaryImage}
+          alt={`${product.name}${selectedColor ? ` - ${selectedColor}` : ''}`}
           loading="lazy"
           className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 ${out ? 'opacity-70' : ''}`}
         />
-        {product.images[1] && (
+        {secondaryImage && (
           <img
-            src={product.images[1]}
+            src={secondaryImage}
             alt=""
             aria-hidden="true"
             loading="lazy"
@@ -61,20 +116,38 @@ export default function ProductCard({ product }) {
         <h3 className="mt-1 line-clamp-1 font-serif text-xl font-semibold text-ink">{product.name}</h3>
         <div className="mt-1 flex items-center justify-between">
           <p className="text-base font-medium text-burgundy">{formatPrice(product.price)}</p>
-          <div className="flex -space-x-1">
-            {product.colors.slice(0, 4).map((c) => (
-              <span
-                key={c.name}
-                title={c.name}
-                className="h-4 w-4 rounded-full border border-white ring-1 ring-ink/15"
-                style={{ background: c.hex }}
-              />
-            ))}
-          </div>
+          {product.colors?.length > 0 && (
+            <div className="flex -space-x-1 items-center" aria-label="Available color variants">
+              {product.colors.slice(0, 5).map((c) => {
+                const isSelected = selectedColor === c.name;
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedColor(c.name);
+                    }}
+                    onMouseEnter={() => setSelectedColor(c.name)}
+                    title={c.name}
+                    aria-label={`Show ${c.name} variant`}
+                    className={`relative h-4 w-4 rounded-full border border-white ring-1 transition-all ${
+                      isSelected ? 'ring-2 ring-burgundy scale-125 z-10 shadow-xs' : 'ring-ink/20 hover:scale-110'
+                    }`}
+                    style={{ background: c.hex }}
+                  />
+                );
+              })}
+              {product.colors.length > 5 && (
+                <span className="pl-2 text-[10px] text-ink-soft">+{product.colors.length - 5}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-auto grid grid-cols-[1fr_auto] gap-2 pt-4">
-          <Link to={`/product/${product.id}`} className="btn-outline btn-sm">
+          <Link to={productLink} className="btn-outline btn-sm">
             <Eye size={15} /> View Details
           </Link>
           <button

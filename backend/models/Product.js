@@ -12,6 +12,10 @@ const colorSchema = new mongoose.Schema(
       required: [true, 'Color hex code is required'],
       trim: true,
     },
+    images: {
+      type: [String],
+      default: [],
+    },
   },
   { _id: false }
 );
@@ -128,6 +132,37 @@ const productSchema = new mongoose.Schema(
     },
   }
 );
+
+// Auto-populate product.images if empty but colors have color-specific images
+productSchema.pre('validate', function () {
+  if ((!this.images || this.images.length === 0) && Array.isArray(this.colors)) {
+    const collected = this.colors.flatMap((c) => (Array.isArray(c.images) ? c.images : []));
+    if (collected.length > 0) {
+      this.images = collected;
+    }
+  }
+});
+
+// Virtual for structured color variants matching requested format
+productSchema.virtual('variants').get(function () {
+  if (!this.colors) return [];
+  const totalColors = this.colors.length;
+  return this.colors.map((c, idx) => {
+    let imgs = Array.isArray(c.images) && c.images.length > 0 ? c.images : [];
+    if (!imgs.length && Array.isArray(this.images) && this.images.length > 0) {
+      if (totalColors === 1) {
+        imgs = this.images;
+      } else if (idx < this.images.length) {
+        imgs = [this.images[idx]];
+      }
+    }
+    return {
+      color: c.name,
+      hex: c.hex,
+      images: imgs,
+    };
+  });
+});
 
 // Virtual for calculating total units in stock across all valid variants
 productSchema.virtual('totalUnits').get(function () {

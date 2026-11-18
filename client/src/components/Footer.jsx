@@ -1,13 +1,17 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Mail, MapPin, Clock } from 'lucide-react';
 import Logo from './Logo';
 import WhatsAppIcon from './WhatsAppIcon';
+import SizeChartModal from './SizeChartModal';
 import { CATEGORIES, categoryPath } from '../config/site';
 import { useStore } from '../context/StoreContext';
 import { whatsappUrl } from '../utils/whatsapp';
 
 export default function Footer() {
   const { settings } = useStore();
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const [sizeChartType, setSizeChartType] = useState('oversized');
   const col = 'mb-4 text-xs font-medium uppercase tracking-[0.25em] text-gold';
   const link = 'text-sm text-cream/70 transition hover:text-gold';
 
@@ -40,6 +44,42 @@ export default function Footer() {
             {[['Home', '/'], ['Shop', '/shop'], ['About', '/about'], ['Contact', '/contact']].map(([l, t]) => (
               <li key={l}><Link to={t} className={link}>{l}</Link></li>
             ))}
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setSizeChartType('oversized');
+                  setSizeChartOpen(true);
+                }}
+                className={`${link} text-left cursor-pointer`}
+              >
+                Oversized Size Guide
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setSizeChartType('polo');
+                  setSizeChartOpen(true);
+                }}
+                className={`${link} text-left cursor-pointer`}
+              >
+                Polo Collar Size Guide
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setSizeChartType('regular');
+                  setSizeChartOpen(true);
+                }}
+                className={`${link} text-left cursor-pointer`}
+              >
+                Regular Fit Size Guide
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -71,6 +111,12 @@ export default function Footer() {
           <p className="font-serif text-base italic text-gold/80">stitched for you</p>
         </div>
       </div>
+
+      <SizeChartModal
+        isOpen={sizeChartOpen}
+        onClose={() => setSizeChartOpen(false)}
+        initialType={sizeChartType}
+      />
     </footer>
   );
 }
