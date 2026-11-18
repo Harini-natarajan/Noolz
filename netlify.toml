@@ -1,0 +1,21 @@
+
+[build]
+  command = "npm install --prefix backend && npm install --prefix client && npm run build --prefix client"
+  publish = "client/dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "zisi"
+
+# Send API requests to the Express function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# React Router fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
