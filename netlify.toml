@@ -5,7 +5,7 @@
   functions = "netlify/functions"
 
 [functions]
-  node_bundler = "zisi"
+  node_bundler = "esbuild"
 
 # Send API requests to the Express function
 [[redirects]]
