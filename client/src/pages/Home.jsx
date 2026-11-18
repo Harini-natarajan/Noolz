@@ -13,68 +13,19 @@ export default function Home() {
   const { products, loading, settings } = useStore();
   const featured = products.filter((p) => p.featured).slice(0, 8);
 
-  // Fetch images from database products for the About section
-  const aboutImages = useMemo(() => {
-    // 1. If custom about images are configured in settings, prioritize them
-    if (settings?.aboutImage) {
-      return [
-        { src: settings.aboutImage, alt: settings.businessName || 'About our brand', id: 'setting-1' },
-        { src: settings.aboutImage2 || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80', alt: 'NOOLZ Craftsmanship', id: 'setting-2' },
-      ];
-    }
-
-    // 2. Fetch primary images from database products
-    const collected = [];
-    if (Array.isArray(products) && products.length > 0) {
-      for (const p of products) {
-        const validImg = Array.isArray(p.images)
-          ? p.images.find((img) => typeof img === 'string' && img.trim().length > 0)
-          : null;
-        if (validImg) {
-          collected.push({
-            src: validImg,
-            alt: p.name || 'NOOLZ apparel',
-            id: p.id || p._id || p.name,
-          });
-        }
-        if (collected.length >= 2) break;
-      }
-
-      // If only 1 product was found with an image, check if it has a second image
-      if (collected.length === 1) {
-        const p0 = products.find((p) => p.images && p.images.length > 1);
-        if (p0 && p0.images[1]) {
-          collected.push({
-            src: p0.images[1],
-            alt: p0.name || 'NOOLZ apparel',
-            id: `${p0.id || p0._id}-2`,
-          });
-        }
-      }
-    }
-
-    // 3. Fallback high-quality images if database has fewer than 2 images
-    const fallbacks = [
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80',
-    ];
-
-    if (collected.length === 0) {
-      return [
-        { src: fallbacks[0], alt: 'NOOLZ handcrafted apparel', id: 'fb-1' },
-        { src: fallbacks[1], alt: 'Original NOOLZ prints', id: 'fb-2' },
-      ];
-    }
-
-    if (collected.length === 1) {
-      return [
-        collected[0],
-        { src: fallbacks[1], alt: 'Original NOOLZ prints', id: 'fb-2' },
-      ];
-    }
-
-    return collected.slice(0, 2);
-  }, [products, settings]);
+  // Static, high-resolution authentic NOOLZ photoshoot images for the About section
+  const aboutImages = [
+    {
+      src: '/about/about-1.jpg',
+      alt: 'NOOLZ Handcrafted Apparel',
+      id: 'about-static-1',
+    },
+    {
+      src: '/about/about-2.jpg',
+      alt: 'NOOLZ Printed Canvas Tote Bag',
+      id: 'about-static-2',
+    },
+  ];
 
   return (
     <>
@@ -161,13 +112,6 @@ export default function Home() {
                     src={img.src}
                     alt={img.alt}
                     loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        i === 0
-                          ? 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'
-                          : 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80';
-                    }}
                     className="aspect-[4/5] w-full object-cover transition-transform duration-700 hover:scale-105"
                   />
                 </div>
