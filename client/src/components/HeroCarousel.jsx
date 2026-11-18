@@ -12,7 +12,7 @@ const FALLBACK_SLIDES = [
     subtitle: 'Everyday comfort. Extraordinary prints.',
     buttonText: "Explore Men's Collection",
     link: '/shop/mens',
-    image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1920&q=85',
+    image: '/categories/men.jpg',
     fallbackImage: '/hero/slide-men.svg',
   },
   {
@@ -23,7 +23,7 @@ const FALLBACK_SLIDES = [
     subtitle: 'Discover prints that match your personality.',
     buttonText: "Explore Women's Collection",
     link: '/shop/womens',
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1920&q=85',
+    image: '/categories/women.jpg',
     fallbackImage: '/hero/slide-women.svg',
   },
   {
@@ -34,7 +34,7 @@ const FALLBACK_SLIDES = [
     subtitle: 'Comfortable prints for little personalities.',
     buttonText: "Explore Kids' Collection",
     link: '/shop/kids',
-    image: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=1920&q=85',
+    image: '/categories/kids.jpg',
     fallbackImage: '/hero/slide-kids.svg',
   },
   {
@@ -45,7 +45,7 @@ const FALLBACK_SLIDES = [
     subtitle: 'Everyday essentials with a creative touch.',
     buttonText: 'Explore Tote Bags',
     link: '/shop/tote-bags',
-    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1920&q=85',
+    image: '/categories/tote.jpg',
     fallbackImage: '/hero/slide-tote.svg',
   },
 ];

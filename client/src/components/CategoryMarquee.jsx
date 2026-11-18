@@ -1,18 +1,12 @@
 import { Link } from 'react-router-dom';
 import { CATEGORIES, categoryPath } from '../config/site';
-import { useStore } from '../context/StoreContext';
 
 /** Static "shop by category" row — four circular tiles that link to each category. */
 export default function CategoryMarquee() {
-  const { products } = useStore();
-
-  const items = CATEGORIES.map((c) => {
-    const prod = products.find((p) => p.category === c.slug);
-    return {
-      ...c,
-      image: prod?.images?.[0] || prod?.colors?.[0]?.images?.[0] || null,
-    };
-  });
+  const items = CATEGORIES.map((c) => ({
+    ...c,
+    image: c.image || `/categories/${c.slug}.jpg`,
+  }));
 
   return (
     <section aria-label="Shop by category" className="border-y border-ink/5 bg-cream-dark/60 py-10">

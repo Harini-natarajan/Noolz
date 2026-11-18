@@ -35,6 +35,7 @@ export const CATEGORIES = [
     name: "Men's T-Shirts",
     collection: "Men's Collection",
     short: "Men's",
+    image: '/categories/men.jpg',
     description: 'Relaxed, oversized and everyday tees with original prints on premium cotton.',
     subcategories: [
       { slug: 'normal-fit', name: 'Normal Fit' },
@@ -48,6 +49,7 @@ export const CATEGORIES = [
     name: "Women's T-Shirts",
     collection: "Women's Collection",
     short: "Women's",
+    image: '/categories/women.jpg',
     description: 'Soft, flattering silhouettes — from cropped cuts to easy oversized fits.',
     subcategories: [
       { slug: 'oversized', name: 'Oversized Tees' },
@@ -61,6 +63,7 @@ export const CATEGORIES = [
     name: "Kids' T-Shirts",
     collection: "Kids' Collection",
     short: "Kids'",
+    image: '/categories/kids.jpg',
     description: 'Playful prints on gentle, skin-friendly cotton made for little adventurers.',
     allLabel: "All Kids' T-Shirts",
     subcategories: [], // ready for future subcategories
@@ -71,6 +74,7 @@ export const CATEGORIES = [
     name: 'Tote Bags',
     collection: 'Tote Bags',
     short: 'Tote Bags',
+    image: '/categories/tote.jpg',
     description: 'Sturdy printed canvas totes — roomy, durable and made for everyday carry.',
     allLabel: 'All Tote Bags',
     subcategories: [], // ready for future subcategories

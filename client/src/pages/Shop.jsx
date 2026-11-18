@@ -30,11 +30,9 @@ export default function Shop() {
   // Category showcase images for the 4 sections on main shop page
   const categoryShowcase = useMemo(() => {
     return CATEGORIES.map((cat) => {
-      const sample = products.find((p) => p.category === cat.slug && p.featured) ||
-                     products.find((p) => p.category === cat.slug);
       return {
         ...cat,
-        image: sample?.images?.[0] || null,
+        image: cat.image || `/categories/${cat.slug}.jpg`,
         count: products.filter((p) => p.category === cat.slug).length,
       };
     });
