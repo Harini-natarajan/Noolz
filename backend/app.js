@@ -12,6 +12,7 @@ const app = express();
 
 // Allowed Origins
 const allowedOrigins = [
+  'https://noolzcoin.netlify.app',
   process.env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:3000',
