@@ -125,8 +125,11 @@ const seedDatabase = async () => {
     // 1. Seed or Update Admin
     const username = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
     const email = (process.env.ADMIN_EMAIL || 'admin@noolz.in').trim().toLowerCase();
-    const password = process.env.ADMIN_PASSWORD || 'AdminPassword@123';
+    const password = process.env.ADMIN_PASSWORD;
 
+    if (!password) {
+        throw new Error('ADMIN_PASSWORD is not configured.');
+    }
     let admin = await Admin.findOne({ $or: [{ username }, { email }] });
     if (!admin) {
       admin = await Admin.create({ username, email, password, role: 'admin' });

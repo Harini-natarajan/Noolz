@@ -59,7 +59,7 @@ const runTests = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         identifier: 'Hellonoolz.in@gmail.com',
-        password: 'Noolz@123',
+        password: process.env.ADMIN_PASSWORD,
       }),
     });
     const validLoginData = await validLoginRes.json();
